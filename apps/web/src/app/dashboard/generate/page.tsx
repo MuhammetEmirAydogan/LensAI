@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UploadCloud, Wand2, PlayCircle, Loader2 } from "lucide-react";
+import { UploadCloud, Wand2, PlayCircle, Loader2, Film } from "lucide-react";
 
 export default function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);

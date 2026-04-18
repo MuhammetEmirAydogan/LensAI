@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, Film, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
@@ -39,7 +39,7 @@ export default function Dashboard() {
                 <div className="bg-primary h-full w-[24%] glow-green rounded-full"></div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Bu ayki kotanızın %24'ünü kullandınız.
+                Bu ayki kotanızın %24&apos;ünü kullandınız.
               </p>
             </CardContent>
           </Card>
