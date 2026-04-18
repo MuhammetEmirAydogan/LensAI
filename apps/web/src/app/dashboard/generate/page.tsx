@@ -1,21 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, Wand2, PlayCircle, Loader2, Film } from "lucide-react";
+import axios from "axios";
+import { useAuth } from "@clerk/nextjs";
+import io from "socket.io-client";
 
 export default function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [progress, setProgress] = useState(0);
+  const { getToken, userId } = useAuth();
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    if (!userId) return;
+    const socket = io("http://localhost:4000");
+    
+    socket.on("connect", () => {
+      socket.emit("auth", userId);
+    });
+    
+    socket.on("kling.progress", (data) => {
+      console.log("Progress update:", data);
+      if (data.progress) setProgress(Math.floor(data.progress * 100));
+    });
+
+    return () => { socket.disconnect(); };
+  }, [userId]);
+
+  const handleGenerate = async () => {
+    if (!prompt) return;
     setIsGenerating(true);
-    // Simulating API call
-    setTimeout(() => {
+    setProgress(0);
+    
+    try {
+      const token = await getToken();
+      await axios.post(
+        "http://localhost:4000/api/v1/generate/video",
+        { prompt, imageUrl: "" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // API Gateway successfully queued the task!
+    } catch (error) {
+      console.error("Generation error:", error);
       setIsGenerating(false);
-    }, 4000);
+    }
   };
 
   return (
@@ -108,11 +140,11 @@ export default function GeneratePage() {
                   <div className="relative w-32 h-32">
                     <div className="absolute inset-0 border-4 border-t-secondary border-r-primary border-b-transparent border-l-transparent rounded-full animate-spin"></div>
                     <div className="absolute inset-2 border-4 border-l-primary border-b-secondary border-t-transparent border-r-transparent rounded-full animate-spin direction-reverse"></div>
-                    <Film className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-white/50" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-white">{progress}%</div>
                   </div>
                   <div className="text-center">
                     <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-secondary to-primary animate-pulse">Render Alınıyor</h3>
-                    <p className="text-sm text-white/60 mt-2">Kling AI videonuzu işliyor. Lütfen bekleyin...</p>
+                    <p className="text-sm text-white/60 mt-2">Kling AI videonuzu işliyor... ({progress}%)</p>
                   </div>
                 </div>
               ) : (
