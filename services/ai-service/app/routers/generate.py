@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 import structlog
 from app.services.masking_service import process_and_mask_image
+from app.services.prompt_service import PromptEngine
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -36,3 +37,19 @@ async def process_video_generation(req: GenerateRequest, background_tasks: Backg
     logger.info("Video generation job received", job_id=req.jobId)
     # Gelecekte Kling AI vb. asenkron video üretim API entegrasyonu buraya gelecek.
     return {"success": True, "message": "Job accepted"}
+
+class PromptGenRequest(BaseModel):
+    category: str
+    styleId: str
+    customPrompt: Optional[str] = None
+
+@router.post("/generate-prompt")
+async def generate_prompt(req: PromptGenRequest):
+    logger.info("Prompt generation requested", category=req.category, style=req.styleId)
+    try:
+        prompt = PromptEngine.generate_prompt(req.category, req.styleId, req.customPrompt)
+        return {"success": True, "prompt": prompt}
+    except Exception as e:
+        logger.error("Prompt generation failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Prompt generation failed")
+
