@@ -117,16 +117,27 @@ export async function checkUsageLimit(
     return;
   }
 
-  // -1 = unlimited (agency/enterprise)
-  if (user.videosLimit === -1) {
-    next();
-    return;
+  // 1. Abonelik Kontrolü
+  // Eğer kullanıcının aktif ve iptal edilmemiş bir aboneliği varsa (örn: PRO veya AGENCY)
+  // genellikle Limitsiz (veya yüksek limitli) hakka sahiptir.
+  if (user.subscriptionTier && user.subscriptionTier !== 'FREE' && user.subscriptionStatus === 'active') {
+    // Limitsiz pakette olduğunu varsayarsak devam eder.
+    if (user.subscriptionTier === 'AGENCY') {
+        return next();
+    }
   }
 
-  if (user.videosUsed >= user.videosLimit) {
-    next(Errors.usageLimitReached());
-    return;
+  // 2. Kredi Sistemi Kontrolü 
+  // Abonelik yoksa veya bittiyse "kredi" harcaması üzerinden çalıştır (Phase 1.8 Kredi Mantığı)
+  if (user.credits && user.credits > 0) {
+    // İşlem başarılı olursa kredisini 1 azalt
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { credits: { decrement: 1 } }
+    });
+    return next();
   }
 
-  next();
+  // Hak bitti!
+  next(Errors.usageLimitReached());
 }
