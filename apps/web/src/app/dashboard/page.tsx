@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, Film, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
+import { DataGridCanvas } from "@/components/canvas/DataGridCanvas";
 
 export default function Dashboard() {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
+      <DataGridCanvas />
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
