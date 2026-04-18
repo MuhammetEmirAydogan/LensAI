@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { requireAuth, attachUser, checkUsageLimit } from '../middleware/auth.middleware';
 import { validateRequest } from '../middleware/validate.middleware';
-import { uploadToS3 } from '../lib/s3';
+import { generateUploadUrl } from '../lib/s3';
 import { prisma } from '../lib/prisma';
 import { cache } from '../lib/redis';
 import { Errors } from '../middleware/error.middleware';
@@ -14,69 +14,64 @@ import axios from 'axios';
 
 export const generateRouter = Router();
 
-// Multer — memory storage (S3'e yüklemek için)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Sadece JPG, PNG ve WebP dosyaları kabul edilir.'));
-    }
-  },
+const getPresignedSchema = z.object({
+  projectId: z.string().uuid(),
+  fileName: z.string().min(1),
+  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  fileSize: z.number().max(50 * 1024 * 1024), // Max 50MB
 });
 
 // ─────────────────────────────────────
-// POST /generate/upload — Görsel yükle
+// POST /generate/upload — Presigned URL Al
 // ─────────────────────────────────────
 generateRouter.post(
   '/upload',
   requireAuth,
   attachUser,
-  upload.single('image'),
+  validateRequest(getPresignedSchema),
   async (req, res, next) => {
     try {
-      if (!req.file) {
-        throw Errors.validation('Görsel dosyası gereklidir.');
-      }
-
-      const { projectId } = req.body as { projectId: string };
-      if (!projectId) throw Errors.validation('projectId gereklidir.');
+      const body = req.body as z.infer<typeof getPresignedSchema>;
 
       // Projenin kullanıcıya ait olduğunu doğrula
       const project = await prisma.project.findFirst({
-        where: { id: projectId, userId: req.user!.id, deletedAt: null },
+        where: { id: body.projectId, userId: req.user!.id, deletedAt: null },
       });
       if (!project) throw Errors.notFound('Proje bulunamadı.');
 
-      // S3'e yükle
-      const s3Key = `uploads/${req.user!.id}/${Date.now()}-${req.file.originalname}`;
-      const originalUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+      // Presigned URL Üret
+      const { uploadUrl, key, publicUrl } = await generateUploadUrl(
+        req.user!.id,
+        body.contentType,
+        body.fileName
+      );
 
-      // MediaItem oluştur
+      // DB'de MediaItem oluştur. Client uploadUrl'yi kullanarak upload edecek.
       const mediaItem = await prisma.mediaItem.create({
         data: {
-          projectId,
+          projectId: body.projectId,
           userId: req.user!.id,
-          originalUrl,
-          fileName: req.file.originalname,
-          fileSize: req.file.size,
-          mimeType: req.file.mimetype as 'image/jpeg' | 'image/png' | 'image/webp',
+          originalUrl: publicUrl,
+          fileName: body.fileName,
+          fileSize: body.fileSize,
+          mimeType: body.contentType,
         },
       });
 
-      logger.info({ mediaItemId: mediaItem.id, userId: req.user!.id }, 'Image uploaded');
+      logger.info({ mediaItemId: mediaItem.id, userId: req.user!.id }, 'Presigned URL generated');
 
       res.status(201).json({
         success: true,
-        data: { mediaItemId: mediaItem.id, originalUrl },
+        data: { 
+          mediaItemId: mediaItem.id, 
+          uploadUrl, // Frontend bu URL'ye PUT request atmalı
+          originalUrl: publicUrl 
+        },
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 );
 
 // ─────────────────────────────────────

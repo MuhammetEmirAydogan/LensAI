@@ -114,3 +114,5 @@ secrets/
 # Ignore planning md files
 *.md
 !README.md
+
+/.github/

@@ -126,6 +126,43 @@ services:
     profiles:
       - tools
 
+  # ─────────────────────────────────────
+  # MINIO — S3 Compatible Local Storage
+  # API: 9000 | Console: 9001
+  # ─────────────────────────────────────
+  minio:
+    image: minio/minio
+    container_name: lensai-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - lensai-network
+
+  # MinIO Client (mc) - Bucket oluşturmak için
+  minio-init:
+    image: minio/mc
+    container_name: lensai-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/lensai-uploads || true;
+      /usr/bin/mc anonymous set public myminio/lensai-uploads;
+      exit 0;
+      "
+    networks:
+      - lensai-network
+
 volumes:
   postgres_data:
     name: lensai_postgres_data
@@ -133,8 +170,12 @@ volumes:
     name: lensai_redis_data
   mongodb_data:
     name: lensai_mongodb_data
+  minio_data:
+    name: lensai_minio_data
 
 networks:
   lensai-network:
     name: lensai-network
     driver: bridge
+
+  # ─────────────────────────────────────

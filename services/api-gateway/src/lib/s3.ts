@@ -1,66 +1,46 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { logger } from './logger';
+import { v4 as uuidv4 } from 'uuid';
 
-const s3 = new S3Client({
-  region: process.env['AWS_REGION'] ?? 'eu-central-1',
+export const s3Client = new S3Client({
+  region: process.env['AWS_REGION'] || 'us-east-1',
   credentials: {
-    accessKeyId: process.env['AWS_ACCESS_KEY_ID'] ?? '',
-    secretAccessKey: process.env['AWS_SECRET_ACCESS_KEY'] ?? '',
+    accessKeyId: process.env['AWS_ACCESS_KEY_ID'] || 'minioadmin',
+    secretAccessKey: process.env['AWS_SECRET_ACCESS_KEY'] || 'minioadmin',
   },
+  endpoint: process.env['AWS_S3_ENDPOINT'] || 'http://localhost:9000',
+  forcePathStyle: true, // MinIO için gerekli
 });
 
-const UPLOADS_BUCKET = process.env['S3_BUCKET_UPLOADS'] ?? 'lensai-uploads-dev';
-const VIDEOS_BUCKET = process.env['S3_BUCKET_VIDEOS'] ?? 'lensai-videos-dev';
-const CDN_DOMAIN = process.env['CLOUDFRONT_DOMAIN'];
+const BUCKET_NAME = process.env['AWS_S3_BUCKET'] || 'lensai-uploads';
 
-export async function uploadToS3(
-  buffer: Buffer,
-  key: string,
-  mimeType: string,
-  bucket = UPLOADS_BUCKET,
-): Promise<string> {
-  await s3.send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: buffer,
-    ContentType: mimeType,
-    ServerSideEncryption: 'AES256',
-  }));
+/**
+ * Client'ın doğrudan S3'e (veya Minio'ya) doysa yükleyebilmesi için Presigned URL üretir.
+ */
+export async function generateUploadUrl(userId: string, contentType: string, originalName: string) {
+  const extension = originalName.split('.').pop() || 'tmp';
+  const fileName = `${uuidv4()}.${extension}`;
+  const key = `uploads/${userId}/${fileName}`;
 
-  const url = CDN_DOMAIN
-    ? `https://${CDN_DOMAIN}/${key}`
-    : `https://${bucket}.s3.${process.env['AWS_REGION']}.amazonaws.com/${key}`;
-
-  logger.debug({ key, bucket, url }, 'File uploaded to S3');
-  return url;
-}
-
-export async function generatePresignedUploadUrl(
-  key: string,
-  mimeType: string,
-  expiresInSeconds = 900,
-): Promise<string> {
   const command = new PutObjectCommand({
-    Bucket: UPLOADS_BUCKET,
+    Bucket: BUCKET_NAME,
     Key: key,
-    ContentType: mimeType,
+    ContentType: contentType,
   });
 
-  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+  // 15 dakika geçerli yükleme URL'si
+  const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+  
+  const publicUrl = `${process.env['AWS_S3_ENDPOINT'] || 'http://localhost:9000'}/${BUCKET_NAME}/${key}`;
+
+  return { uploadUrl, key, publicUrl };
 }
 
-export async function generatePresignedDownloadUrl(
-  key: string,
-  expiresInSeconds = 900,
-  bucket = VIDEOS_BUCKET,
-): Promise<string> {
+export async function generatePresignedDownloadUrl(key: string, originalName?: string) {
   const command = new GetObjectCommand({
-    Bucket: bucket,
+    Bucket: BUCKET_NAME,
     Key: key,
+    ResponseContentDisposition: originalName ? `attachment; filename="${originalName}"` : undefined,
   });
-
-  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+  return getSignedUrl(s3Client, command, { expiresIn: 3600 });
 }
-
-export { UPLOADS_BUCKET, VIDEOS_BUCKET };

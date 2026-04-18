@@ -19,8 +19,8 @@
     "db:generate": "prisma generate"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.600.0",
-    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.1032.0",
+    "@aws-sdk/s3-request-presigner": "^3.1032.0",
     "@clerk/backend": "^1.0.0",
     "@clerk/express": "^1.0.0",
     "@lensai/shared-types": "*",
@@ -44,6 +44,7 @@
     "socket.io": "^4.7.5",
     "stripe": "^16.8.0",
     "svix": "^1.90.0",
+    "uuid": "^13.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -54,6 +55,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.0.0",
     "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^2.0.0",
     "prisma": "^5.17.0",
     "supertest": "^7.0.0",
