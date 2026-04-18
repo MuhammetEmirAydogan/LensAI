@@ -8,6 +8,7 @@ import { cache } from '../lib/redis';
 import { Errors } from '../middleware/error.middleware';
 import { logger } from '../lib/logger';
 import { io } from '../app';
+import { videoQueue } from '../lib/queue';
 import multer from 'multer';
 import { z } from 'zod';
 import axios from 'axios';
@@ -129,18 +130,26 @@ generateRouter.post(
         data: { videosUsed: { increment: 1 } },
       });
 
-      // AI Service'e iş gönder (async)
+      // 1. AI Service'ten harika bir Prompt al (Phase 1.6)
       const aiServiceUrl = process.env['AI_SERVICE_URL'] ?? 'http://localhost:8000';
-      axios.post(`${aiServiceUrl}/ai/v1/generate`, {
+      let generatedPrompt = body.customPrompt || 'A cinematic masterpiece video.';
+      
+      try {
+        const promptParams = { category: 'product', styleId: body.styleId, customPrompt: body.customPrompt };
+        const promptRes = await axios.post(`${aiServiceUrl}/generate-prompt`, promptParams);
+        if (promptRes.data?.success) {
+            generatedPrompt = promptRes.data.prompt;
+        }
+      } catch (err: any) {
+        logger.warn({ error: err.message }, 'Could not generate prompt, using fallback');
+      }
+
+      // 2. BullMQ Kuyruğuna ekle (Worker, Kling\'i çağıracak) (Phase 1.7)
+      await videoQueue.add(job.id, {
         jobId: job.id,
-        mediaItemId: body.mediaItemId,
         imageUrl: mediaItem.originalUrl,
-        styleId: body.styleId,
-        customPrompt: body.customPrompt,
+        prompt: generatedPrompt,
         userId: req.user!.id,
-        options: body.options,
-      }).catch((err) => {
-        logger.error({ error: err.message, jobId: job.id }, 'Failed to send job to AI service');
       });
 
       logger.info({ jobId: job.id, userId: req.user!.id, styleId: body.styleId }, 'Video generation started');
