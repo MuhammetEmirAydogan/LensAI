@@ -110,3 +110,7 @@ id_rsa
 id_dsa
 *.secret
 secrets/
+
+# Ignore planning md files
+*.md
+!README.md
