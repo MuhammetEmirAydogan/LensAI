@@ -206,12 +206,13 @@ type RenderStage =
 - Hızlı aksiyon butonları
 - Son aktivite feed
 - Plan durumu widget'ı
+- **(ZORUNLU 3D):** Arka planda veya widget içlerinde sürekli veri akışını simüle eden WebGL / React-Three-Fiber parçacıkları (Particle Grid veya Node Graph) bulunmak zorundadır.
 
 ### Video Stüdyo
 - Sol panel: Fotoğraf + maskeleme önizleme
 - Orta: Stil şablonları grid (hover'da video preview)
 - Sağ: Prompt editörü, aspect ratio, FPS, duration
-- Real-time render durumu
+- Real-time render durumu: **(ZORUNLU 3D)** Basit progress bar YASAKTIR. Bunun yerine 3D ortamda dönen bir kamera lensi, iskelet wireframe veya render %'si doldukça parlayan hacimsel (volumetric) 3D model kullanılacaktır.
 - Geçmiş videoların listesi (sağ alt köşe)
 
 ### Analytics Sayfası

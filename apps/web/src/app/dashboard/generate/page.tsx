@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, Wand2, PlayCircle, Loader2, Film } from "lucide-react";
+import { LensCanvas } from "@/components/canvas/LensCanvas";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import io from "socket.io-client";
@@ -136,9 +137,10 @@ export default function GeneratePage() {
             </CardHeader>
             <CardContent className="flex-1 flex flex-col items-center justify-center p-6">
               {isGenerating ? (
-                <div className="flex flex-col items-center justify-center space-y-6">
-                  <div className="relative w-32 h-32">
-                    <div className="absolute inset-0 border-4 border-t-secondary border-r-primary border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                <div className="flex flex-col items-center justify-center space-y-6 w-full h-full relative overflow-hidden">
+                  <LensCanvas progress={progress} />
+                  <div className="relative w-32 h-32 z-10">
+                    <div className="absolute inset-0 rounded-full animate-pulse blur-xl bg-primary/20"></div>
                     <div className="absolute inset-2 border-4 border-l-primary border-b-secondary border-t-transparent border-r-transparent rounded-full animate-spin direction-reverse"></div>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-white">{progress}%</div>
                   </div>
@@ -148,9 +150,10 @@ export default function GeneratePage() {
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-full border border-white/10 border-dashed rounded-xl flex items-center justify-center bg-black/20">
-                  <p className="text-white/30 font-medium tracking-widest uppercase">
-                    SINYAL BEKLENIYOR
+                <div className="w-full h-full border border-white/10 border-dashed rounded-xl flex items-center justify-center bg-black/20 relative overflow-hidden">
+                  <LensCanvas progress={0} />
+                  <p className="text-white/30 font-medium tracking-widest uppercase z-10 drop-shadow-lg">
+                    SİNYAL BEKLENİYOR
                   </p>
                 </div>
               )}
