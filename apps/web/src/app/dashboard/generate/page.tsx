@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { UploadCloud, Wand2, PlayCircle, Loader2 } from "lucide-react";
+
+export default function GeneratePage() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [prompt, setPrompt] = useState("");
+
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    // Simulating API call
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 4000);
+  };
+
+  return (
+    <div className="container mx-auto p-4 md:p-8">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-bold tracking-tight glow-purple inline-block px-4 py-1 rounded-lg bg-secondary/10 text-white">
+          Video Stüdyosu
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Kling AI altyapısıyla hayalini kurduğunuz anları saniyeler içinde gerçeğe dönüştürün.
+        </p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Sol Panel: Upload ve Prompt */}
+        <motion.div 
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-6"
+        >
+          <Card className="glass-panel border-white/5">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <UploadCloud className="w-5 h-5 text-primary" />
+                Görsel Yükle
+              </CardTitle>
+              <CardDescription>Videonun çıkış noktası olacak temel resmi seçin (Opsiyonel).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border-2 border-dashed border-white/10 hover:border-primary/50 transition-colors rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer bg-black/20">
+                <UploadCloud className="w-12 h-12 text-white/20 mb-4" />
+                <p className="text-sm text-white/60 text-center">
+                  Sürükleyip bırakın veya <span className="text-primary glow-green">göz atın</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-panel border-white/5">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-secondary glow-purple rounded-full" />
+                AI Prompt Motoru
+              </CardTitle>
+              <CardDescription>Sahnede ne olmasını istediğinizi anlatın, gerisini prompt asistanımız halletsin.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Örn: Yağmurlu bir siberpunk şehrinde yürüyen neon ışıklı robot, sinematik, 4k..."
+                className="w-full min-h-[120px] bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 placeholder:text-white/20 resize-none transition-all"
+              />
+              <Button 
+                onClick={handleGenerate}
+                disabled={isGenerating || prompt.length < 5}
+                size="lg" 
+                variant="cyber" 
+                className="w-full text-lg"
+              >
+                {isGenerating ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Üretiliyor...</>
+                ) : (
+                  <><PlayCircle className="w-5 h-5 mr-2" /> Motora Gönder</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Sağ Panel: Önizleme / Çıktı */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="glass-panel border-white/5 h-full min-h-[500px] flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-white">Kamera & Monitör</CardTitle>
+              <CardDescription>Videonuz üretildiğinde burada gösterilecektir.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col items-center justify-center p-6">
+              {isGenerating ? (
+                <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="relative w-32 h-32">
+                    <div className="absolute inset-0 border-4 border-t-secondary border-r-primary border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-2 border-4 border-l-primary border-b-secondary border-t-transparent border-r-transparent rounded-full animate-spin direction-reverse"></div>
+                    <Film className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-white/50" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-secondary to-primary animate-pulse">Render Alınıyor</h3>
+                    <p className="text-sm text-white/60 mt-2">Kling AI videonuzu işliyor. Lütfen bekleyin...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full border border-white/10 border-dashed rounded-xl flex items-center justify-center bg-black/20">
+                  <p className="text-white/30 font-medium tracking-widest uppercase">
+                    SINYAL BEKLENIYOR
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
