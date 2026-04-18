@@ -1,0 +1,360 @@
+// generator ve datasource tanımı
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────
+// TEAMS
+// ─────────────────────────────────────
+model Team {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(255)
+  ownerId   String?  @db.Uuid @map("owner_id")
+  plan      String   @default("agency") @db.VarChar(50)
+  logoUrl   String?  @map("logo_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  users     User[]
+  projects  Project[]
+
+  @@map("teams")
+}
+
+// ─────────────────────────────────────
+// USERS
+// ─────────────────────────────────────
+model User {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId          String    @unique @map("clerk_id") @db.VarChar(255)
+  email            String    @unique @db.VarChar(255)
+  name             String?   @db.VarChar(255)
+  avatarUrl        String?   @map("avatar_url")
+  plan             String    @default("free") @db.VarChar(50)
+  stripeCustomerId String?   @map("stripe_customer_id") @db.VarChar(255)
+  videosUsed       Int       @default(0) @map("videos_used")
+  videosLimit      Int       @default(5) @map("videos_limit")
+  teamId           String?   @map("team_id") @db.Uuid
+  role             String    @default("member") @db.VarChar(50)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+
+  team             Team?          @relation(fields: [teamId], references: [id])
+  projects         Project[]
+  mediaItems       MediaItem[]
+  videoJobs        VideoJob[]
+  videos           Video[]
+  subscription     Subscription?
+  brandKits        BrandKit[]
+  socialAccounts   SocialAccount[]
+  publishLogs      PublishLog[]
+  apiKeys          ApiKey[]
+  usageLogs        UsageLog[]
+  auditLogs        AuditLog[]
+  aiCostLogs       AiCostLog[]
+
+  @@index([clerkId])
+  @@index([email])
+  @@index([teamId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────
+// PROJECTS
+// ─────────────────────────────────────
+model Project {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  teamId      String?   @map("team_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?
+  brandKitId  String?   @map("brand_kit_id") @db.Uuid
+  status      String    @default("active") @db.VarChar(50)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team?     @relation(fields: [teamId], references: [id])
+  brandKit    BrandKit? @relation(fields: [brandKitId], references: [id])
+  mediaItems  MediaItem[]
+  videos      Video[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@map("projects")
+}
+
+// ─────────────────────────────────────
+// MEDIA ITEMS
+// ─────────────────────────────────────
+model MediaItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  originalUrl     String   @map("original_url")
+  maskedUrl       String?  @map("masked_url")
+  thumbnailUrl    String?  @map("thumbnail_url")
+  fileName        String?  @map("file_name") @db.VarChar(255)
+  fileSize        Int?     @map("file_size")
+  mimeType        String?  @map("mime_type") @db.VarChar(100)
+  width           Int?
+  height          Int?
+  productCategory String?  @map("product_category") @db.VarChar(100)
+  imageHash       String?  @map("image_hash") @db.VarChar(64) // For cache
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+  videoJobs  VideoJob[]
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([imageHash])
+  @@map("media_items")
+}
+
+// ─────────────────────────────────────
+// VIDEO JOBS
+// ─────────────────────────────────────
+model VideoJob {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  mediaItemId  String    @map("media_item_id") @db.Uuid
+  styleId      String    @map("style_id") @db.VarChar(100)
+  customPrompt String?   @map("custom_prompt")
+  aiProvider   String?   @map("ai_provider") @db.VarChar(50)
+  status       String    @default("pending") @db.VarChar(50)
+  stage        String    @default("uploading") @db.VarChar(50)
+  progress     Int       @default(0)
+  errorMessage String?   @map("error_message")
+  retryCount   Int       @default(0) @map("retry_count")
+  startedAt    DateTime? @map("started_at") @db.Timestamptz()
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user       User       @relation(fields: [userId], references: [id])
+  mediaItem  MediaItem  @relation(fields: [mediaItemId], references: [id])
+  video      Video?
+  aiCostLogs AiCostLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("video_jobs")
+}
+
+// ─────────────────────────────────────
+// VIDEOS
+// ─────────────────────────────────────
+model Video {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId         String    @unique @map("job_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  projectId     String    @map("project_id") @db.Uuid
+  videoUrl      String    @map("video_url")
+  thumbnailUrl  String?   @map("thumbnail_url")
+  duration      Decimal?  @db.Decimal(5, 2)
+  resolution    String?   @db.VarChar(20)
+  fileSize      BigInt?   @map("file_size")
+  hasWatermark  Boolean   @default(true) @map("has_watermark")
+  isFavorite    Boolean   @default(false) @map("is_favorite")
+  downloadCount Int       @default(0) @map("download_count")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  job        VideoJob     @relation(fields: [jobId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
+  project    Project      @relation(fields: [projectId], references: [id])
+  publishLogs PublishLog[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@map("videos")
+}
+
+// ─────────────────────────────────────
+// SUBSCRIPTIONS
+// ─────────────────────────────────────
+model Subscription {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @unique @map("user_id") @db.Uuid
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id") @db.VarChar(255)
+  plan                 String    @db.VarChar(50)
+  status               String    @db.VarChar(50)
+  currentPeriodStart   DateTime? @map("current_period_start") @db.Timestamptz()
+  currentPeriodEnd     DateTime? @map("current_period_end") @db.Timestamptz()
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  trialEnd             DateTime? @map("trial_end") @db.Timestamptz()
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────
+// BRAND KITS
+// ─────────────────────────────────────
+model BrandKit {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  logoUrl        String?  @map("logo_url")
+  primaryColor   String?  @map("primary_color") @db.VarChar(7)
+  secondaryColor String?  @map("secondary_color") @db.VarChar(7)
+  fontName       String?  @map("font_name") @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user     User      @relation(fields: [userId], references: [id])
+  projects Project[]
+
+  @@map("brand_kits")
+}
+
+// ─────────────────────────────────────
+// SOCIAL ACCOUNTS
+// ─────────────────────────────────────
+model SocialAccount {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  platform     String    @db.VarChar(50)
+  accountId    String?   @map("account_id") @db.VarChar(255)
+  accessToken  String?   @map("access_token") // encrypted
+  refreshToken String?   @map("refresh_token") // encrypted
+  expiresAt    DateTime? @map("expires_at") @db.Timestamptz()
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user        User         @relation(fields: [userId], references: [id])
+  publishLogs PublishLog[]
+
+  @@index([userId])
+  @@map("social_accounts")
+}
+
+// ─────────────────────────────────────
+// PUBLISH LOGS
+// ─────────────────────────────────────
+model PublishLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  videoId         String    @map("video_id") @db.Uuid
+  socialAccountId String    @map("social_account_id") @db.Uuid
+  platform        String    @db.VarChar(50)
+  externalPostId  String?   @map("external_post_id") @db.VarChar(255)
+  status          String    @db.VarChar(50)
+  scheduledAt     DateTime? @map("scheduled_at") @db.Timestamptz()
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz()
+  errorMessage    String?   @map("error_message")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  video         Video         @relation(fields: [videoId], references: [id])
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id])
+
+  @@map("publish_logs")
+}
+
+// ─────────────────────────────────────
+// API KEYS
+// ─────────────────────────────────────
+model ApiKey {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  name       String    @db.VarChar(255)
+  keyHash    String    @map("key_hash") @db.VarChar(255)
+  keyPrefix  String    @map("key_prefix") @db.VarChar(10)
+  scopes     String[]  @default([])
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz()
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz()
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ─────────────────────────────────────
+// USAGE LOGS (Aylık kullanım)
+// ─────────────────────────────────────
+model UsageLog {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  period            String   @db.VarChar(7)   // '2024-01'
+  videosGenerated   Int      @default(0) @map("videos_generated")
+  videosDownloaded  Int      @default(0) @map("videos_downloaded")
+  storageMb         Decimal  @default(0) @map("storage_used_mb") @db.Decimal(10, 2)
+  apiCalls          Int      @default(0) @map("api_calls")
+  aiCostUsd         Decimal  @default(0) @map("ai_cost_usd") @db.Decimal(10, 4)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, period])
+  @@index([userId, period])
+  @@map("usage_logs")
+}
+
+// ─────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────
+model AuditLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  action       String   @db.VarChar(100)
+  resourceType String   @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.Uuid
+  oldValue     Json?    @map("old_value")
+  newValue     Json?    @map("new_value")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────
+// AI COST LOGS
+// ─────────────────────────────────────
+model AiCostLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  jobId        String?  @map("job_id") @db.Uuid
+  provider     String   @db.VarChar(50)
+  operation    String   @db.VarChar(100)
+  tokensInput  Int?     @map("tokens_input")
+  tokensOutput Int?     @map("tokens_output")
+  creditsUsed  Decimal? @map("credits_used") @db.Decimal(10, 4)
+  costUsd      Decimal  @map("cost_usd") @db.Decimal(10, 6)
+  model        String?  @db.VarChar(100)
+  latencyMs    Int?     @map("latency_ms")
+  success      Boolean  @default(true)
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User?     @relation(fields: [userId], references: [id])
+  job  VideoJob? @relation(fields: [jobId], references: [id])
+
+  @@index([provider])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([jobId])
+  @@map("ai_cost_logs")
+}
