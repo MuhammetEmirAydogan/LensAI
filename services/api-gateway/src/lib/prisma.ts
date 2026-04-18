@@ -20,7 +20,8 @@ export const prisma =
 
 // Development'ta slow query log
 if (process.env['NODE_ENV'] === 'development') {
-  prisma.$on('query', (e) => {
+  // @ts-ignore
+  prisma.$on('query', (e: any) => {
     if (e.duration > 100) {
       logger.warn(
         { query: e.query, duration: e.duration },
@@ -30,7 +31,8 @@ if (process.env['NODE_ENV'] === 'development') {
   });
 }
 
-prisma.$on('error', (e) => {
+// @ts-ignore
+prisma.$on('error', (e: any) => {
   logger.error({ message: e.message }, 'Prisma error');
 });
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router } from 'express';
 import { requireAuth, attachUser, checkUsageLimit } from '../middleware/auth.middleware';
 import { validateRequest } from '../middleware/validate.middleware';

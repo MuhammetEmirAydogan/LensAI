@@ -54,7 +54,6 @@ model User {
   subscription     Subscription?
   brandKits        BrandKit[]
   socialAccounts   SocialAccount[]
-  publishLogs      PublishLog[]
   apiKeys          ApiKey[]
   usageLogs        UsageLog[]
   auditLogs        AuditLog[]
